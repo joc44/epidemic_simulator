@@ -4,16 +4,17 @@ from random import randint
 
 # Constants
 SCREEN_SIZE = WIDTH, HEIGHT = (1280, 720)
-NUMBER_OF_PEOPLE = 10
-PERSON_SPEED = 15
+NUMBER_OF_PEOPLE = 100
+PERSON_SPEED = 300
 PERSON_COLOR_CLEAR = (200, 150, 0)
 PERSON_COLOR_INFECTED = (200, 0, 0)
-PERSON_COLOR_IMMUNE = (200, 150, 0)
+PERSON_COLOR_IMMUNE = (0, 200, 0)
 PERSON_AURA = 10
 ILLNESS_TIME = 500
 IMMUNE_TIME = 800
 INFECTION_PROBALITY_WITH_MASK = 50
 INFECTION_PROBALITY_WITHOUT_MASK = 2
+FIRST_CONTACT = 2
 
 
 # Initialization
@@ -22,6 +23,7 @@ screen = pygame.display.set_mode(SCREEN_SIZE)
 pygame.display.set_caption("Epidemic Simulator 1.0")
 fps = pygame.time.Clock()
 pause = False
+time = 0
 
 # Person class
 class Person:
@@ -44,7 +46,7 @@ class Person:
 
         if PERSON_AURA < self.x + self.dx < WIDTH - PERSON_AURA:
             self.x += self.dx
-        if PERSON_AURA < self.y + self.dy < HEIGHT - PERSON_AURA:
+        if PERSON_AURA + 50 < self.y + self.dy < HEIGHT - PERSON_AURA:
             self.y += self.dy
 
     def cure(self):
@@ -63,21 +65,69 @@ def modify(people):
         person.move()
         person.cure()
 
+        for other_person in people:
+            if id(person) != id(other_person):
+                if other_person.x -2*PERSON_AURA < person.x < other_person.x + 2*PERSON_AURA \
+                        and other_person.y -2*PERSON_AURA < person.y < other_person.y + 2*PERSON_AURA:
+                    if other_person.illness > 0 and person.illness == 0 and person.immune == 0:
+
+
+                        if person.mask == True or other_person.mask == True:
+                             if randint(1, INFECTION_PROBALITY_WITH_MASK) == 1:
+                                person.illness = ILLNESS_TIME
+                        else:
+                            if randint(1, INFECTION_PROBALITY_WITHOUT_MASK) == 1:
+                                person.illness = ILLNESS_TIME
+
 
 
 def draw(people):
 
+    _count_infected_people = 0
+
     screen.fill((0, 0, 0))
 
-    for person in people:
-        pygame.draw.circle(screen, PERSON_COLOR_CLEAR,(person.x, person.y), PERSON_AURA, 0)
 
+    for person in people:
+
+        if person.illness > 0:
+            _color = PERSON_COLOR_INFECTED
+        elif person.immune > 0:
+            _color = PERSON_COLOR_IMMUNE
+        else:
+            _color = PERSON_COLOR_CLEAR
+
+        pygame.draw.circle(screen, _color,(person.x, person.y), PERSON_AURA, 0)
+
+        if person.illness > 0:
+            _count_infected_people += 1
+
+    font = pygame.font.SysFont('Calibri', 30)
+
+    text = font.render("Active cases: " + str(_count_infected_people), True, (200, 200, 200))
+    textRect = text.get_rect()
+    textRect.left = 10
+    textRect.top = 10
+    screen.blit(text, textRect)
+
+    text = font.render("Time: " + str(time), True, (200, 200, 200))
+    textRect = text.get_rect()
+    textRect.left = 250
+    textRect.top = 10
+    screen.blit(text, textRect)
+
+    screen.blit(text, textRect)
     pygame.display.update()
     fps.tick(PERSON_SPEED)
 
 
 # Create people
 main_people_list = [Person(randint(50, WIDTH-50), randint(50, HEIGHT-50)) for i in range(NUMBER_OF_PEOPLE )]
+
+# The first infection
+for i in range(FIRST_CONTACT):
+    main_people_list[i].illness = ILLNESS_TIME
+
 
 #Main program
 while True:
@@ -91,4 +141,5 @@ while True:
     if not pause:
         modify(main_people_list)
         draw(main_people_list)
+        time +=1
 
